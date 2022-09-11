@@ -61,7 +61,7 @@ const positions = [
         ]
     },
     {
-        game: "https://www.chessgames.com/perl/chessgame?gid=1406885",
+        game: "https://www.chessgames.com/perl/chessgame?gid=1670061",
         fen: "r2qk3/pppb2r1/2pbp1N1/5n1Q/8/8/PPP2PPP/RNBR2K1 b q - 2 17",
         moves: [
             { move: "Qf6", eval: "+0.9" }
