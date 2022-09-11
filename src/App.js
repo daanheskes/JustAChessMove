@@ -7,6 +7,7 @@ import ChessPositions from './positions/chessPositions';
 function App() {
 
   let game = useRef(null);
+  const [boardSize, setBoardSize] = useState(600);
   const [currentPosition, setCurrentPosition] = useState(null);
   const [playerToMove, setPlayerToMove] = useState(null);
   const [boardOrientation, setBoardOrientation] = useState(null);
@@ -23,7 +24,36 @@ function App() {
     setBoardOrientation(playerToMove.toLowerCase());
     setCurrentPosition(randomPosition);
     game.current = chess;
+
+    resizeBoard(); 
+
+    window.addEventListener("resize", resizeBoard);
   }, []);
+
+  const resizeBoard = () => {
+    const [vw, vh] = getViewportSizes();
+    const UiHeight = 279;
+    let newBoardSize;
+
+    if (vw > vh) {
+      newBoardSize = vh - UiHeight;
+    } else {
+      if (vh - vw <= UiHeight) {
+        newBoardSize = vh - UiHeight;
+      } else {
+        newBoardSize = vw - 52;
+      }
+    }
+
+    setBoardSize(newBoardSize);
+  }
+
+  const getViewportSizes = () => {
+    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+    const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+
+    return [vw, vh];
+  }
 
   const getRandomPosition = () => {
     const positions = ChessPositions;
@@ -63,7 +93,7 @@ function App() {
     if (move === null) return;
     let moveNotation;
     piece = piece.slice(1);
-    if (piece === "P" || piece === "N") {
+    if (piece === "P" || piece === "N" || piece === "R") {
       moveNotation = piece + sourceSquare + targetSquare;
     } else {
       moveNotation = piece + targetSquare;
@@ -74,18 +104,16 @@ function App() {
 
     if (foundMove) {
       const bestMoveNumber = currentPosition.moves.findIndex(x => x.move === moveNotation) + 1;
-      evaluationText = (bestMoveNumber === 1 ? "Best move!" : "Good move! ") + " Evaluation: " + foundMove.eval;
+      evaluationText = (bestMoveNumber === 1 ? "Best move!" : "Good move!") + " Evaluation: " + foundMove.eval;
       const bestMoveEval = currentPosition.moves[0].eval;
       const worstMoveEval = currentPosition.moves[(currentPosition.moves.length - 1)].eval;
 
-      evaluationText += ` | Best move: ${bestMoveEval} | Worst move: ${worstMoveEval}`;
+      evaluationText += ` | Best move: ${bestMoveEval} | Worst good move: ${worstMoveEval}`;
       setBestMoveNumber(bestMoveNumber);
     } else {
-      evaluationText = "This is not a top 5 move.";
+      evaluationText = "Not a good move.";
     }
 
-    
-    
     setEvaluationMessage(evaluationText); 
 
     const currentPositionClone = structuredClone(currentPosition);
@@ -103,7 +131,7 @@ function App() {
     currentPosition !== null ? 
     (<div className="App">
       <div className="information">
-      <p className="playingAs">Just find a top 5 move for {playerToMove}</p>
+      <p className="playingAs">Just find a move for {playerToMove}</p>
       { evaluationMessage ? <p className="eval">{evaluationMessage}</p> : null }
       { bestMoveNumber ? <p className="bestMoveNumber">Your move ranked: {bestMoveNumber}</p> : null }
       { lastGameAnalysisLink ? <p className="lastGameAnalysisLink"><a href={lastGameAnalysisLink} target="_blank">Analysis link</a> | <a href={lastGameLink} target="_blank">Game link</a></p> : null }
@@ -113,13 +141,15 @@ function App() {
         onPieceDrop={onDrop}
         customLightSquareStyle={{backgroundColor: '#95a5a6'}}
         customDarkSquareStyle={{backgroundColor: '#34495e'}}
-        boardWidth={600}
+        boardWidth={boardSize}
         areArrowsAllowed={true}
         boardOrientation={boardOrientation}
       />
       <div>
       <br />
       <button onClick={retryPosition}>Retry position</button> <button onClick={newPosition}>New position</button>
+      <br />
+      <p className="opensource">This project is open-source: <a href="https://github.com/daanheskes/JustAChessMove">Github</a></p>
       </div>
     </div>
     )
