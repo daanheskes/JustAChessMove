@@ -1,0 +1,39 @@
+.App {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  background: #1e1e1e;
+  color: white;
+}
+
+.information {
+  min-height: 164px;
+}
+
+a {
+  color: #3498db
+}
+
+button {
+  // Reset
+  background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
+  // Reset end
+
+  color: white;
+  padding: 8px 16px;
+  margin: 0 12px;
+  border: 2px solid white;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: background-color 0.15s ease-in-out;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+  }
+}
