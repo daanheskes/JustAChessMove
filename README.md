@@ -6,3 +6,6 @@ There aren't necessarily any tactics, you have to just simply play a (good) move
 ## No engine implemented yet
 
 The evaluations are hard-coded. There is no Chess engine like Stockfish implemented (yet).
+
+## Try it out!
+[https://justachessmove.netlify.app/](https://justachessmove.netlify.app/)
