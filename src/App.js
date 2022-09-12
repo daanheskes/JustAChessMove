@@ -8,6 +8,7 @@ function App() {
 
   let game = useRef(null);
   const [boardSize, setBoardSize] = useState(600);
+  const [loadedPosition, setLoadedPosition] = useState(null);
   const [currentPosition, setCurrentPosition] = useState(null);
   const [playerToMove, setPlayerToMove] = useState(null);
   const [boardOrientation, setBoardOrientation] = useState(null);
@@ -15,11 +16,12 @@ function App() {
   const [bestMoveNumber, setBestMoveNumber] = useState(null);
   const [lastGameAnalysisLink, setLastGameAnalysisLink] = useState(null);
   const [lastGameLink, setLastGameLink] = useState(null);
-  
+  const [movesMadeCount, setMovesMadeCount] = useState(0);
+
   useEffect(() => {
     const randomPosition = getRandomPosition();
     const chess = new Chess(randomPosition.fen);
-    const playerToMove = chess._turn === "w" ? "White" : "Black";
+    const playerToMove = chess._turn === 'w' ? 'White' : 'Black';
     setPlayerToMove(playerToMove);
     setBoardOrientation(playerToMove.toLowerCase());
     setCurrentPosition(randomPosition);
@@ -27,8 +29,23 @@ function App() {
 
     resizeBoard(); 
 
-    window.addEventListener("resize", resizeBoard);
+    window.addEventListener('resize', resizeBoard);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', resizeBoard);
+      window.removeEventListener('keydown', handleKeyDown);
+    }
   }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.repeat) return;
+    console.log(e.keyCode);
+    if (e.key === 'Arrowleft') {
+      if (movesMadeCount > 0) {
+        undoMove();
+      }
+    }
+  }
 
   const resizeBoard = () => {
     const [vw, vh] = getViewportSizes();
@@ -61,7 +78,7 @@ function App() {
     return positions[Math.floor(Math.random() * positions.length)];
   }
 
-  const retryPosition = () => {
+  const undoMove = () => {
     game.current.undo();
 
     const currentPositionClone = structuredClone(currentPosition);
@@ -71,19 +88,28 @@ function App() {
     setBestMoveNumber(null);
   }
 
-  const newPosition = () => {
-    const randomPosition = getRandomPosition();
-    setCurrentPosition(randomPosition);
-    game.current.load(randomPosition.fen);
-    const playerToMove = game.current._turn === "w" ? "White" : "Black";
-    setPlayerToMove(playerToMove);
-    setBoardOrientation(playerToMove.toLowerCase());
-    setLastGameAnalysisLink(null);
-    setEvaluationMessage(null);
-    setBestMoveNumber(null);
+  const resetPosition = () => {
+    console.log(loadedPosition);
+    setCurrentPosition(loadedPosition);
   }
 
-  const onDrop = (sourceSquare, targetSquare, piece) => {
+  const newPosition = () => {
+    const chosenPosition = getRandomPosition();
+    setLoadedPosition(chosenPosition);
+    setCurrentPosition(chosenPosition);
+    game.current.load(chosenPosition.fen);
+    const playerToMove = game.current._turn === 'w' ? 'White' : 'Black';
+    let analysisLink = 'https://lichess.org/analysis/standard/' + chosenPosition.fen.replace(/ /g,'_');
+    setLastGameAnalysisLink(analysisLink);
+    setLastGameLink(chosenPosition.game);
+    setPlayerToMove(playerToMove);
+    setBoardOrientation(playerToMove.toLowerCase());
+    setEvaluationMessage(null);
+    setBestMoveNumber(null);
+    setMovesMadeCount(0);
+  }
+
+  const onDrop = (sourceSquare, targetSquare) => {
     let move = game.current.move({
       from: sourceSquare,
       to: targetSquare
@@ -91,27 +117,23 @@ function App() {
 
     // Don't allow illegal moves
     if (move === null) return;
-    let moveNotation;
-    piece = piece.slice(1);
-    if (piece === "P" || piece === "N" || piece === "R") {
-      moveNotation = piece + sourceSquare + targetSquare;
-    } else {
-      moveNotation = piece + targetSquare;
-    }
+    setMovesMadeCount(movesMadeCount + 1);
+
+    let moveNotation = sourceSquare + targetSquare;
 
     const foundMove = currentPosition.moves.find(x => x.move === moveNotation);
     let evaluationText;
 
     if (foundMove) {
       const bestMoveNumber = currentPosition.moves.findIndex(x => x.move === moveNotation) + 1;
-      evaluationText = (bestMoveNumber === 1 ? "Best move!" : "Good move!") + " Evaluation: " + foundMove.eval;
+      evaluationText = (bestMoveNumber === 1 ? 'Best move!' : 'Good move!') + ' Evaluation: ' + foundMove.eval;
       const bestMoveEval = currentPosition.moves[0].eval;
       const worstMoveEval = currentPosition.moves[(currentPosition.moves.length - 1)].eval;
 
       evaluationText += ` | Best move: ${bestMoveEval} | Worst good move: ${worstMoveEval}`;
       setBestMoveNumber(bestMoveNumber);
     } else {
-      evaluationText = "Not a good move.";
+      evaluationText = 'Not a good move.';
     }
 
     setEvaluationMessage(evaluationText); 
@@ -119,22 +141,22 @@ function App() {
     const currentPositionClone = structuredClone(currentPosition);
     currentPositionClone.fen = game.current.fen();
     setCurrentPosition(currentPositionClone);
-
-    let analysisLink = "https://lichess.org/analysis/standard/";
-    analysisLink += currentPosition.fen.replace(/ /g,"_");
-
-    setLastGameAnalysisLink(analysisLink);
-    setLastGameLink(currentPosition.game);
   }
 
   return (
     currentPosition !== null ? 
-    (<div className="App">
-      <div className="information">
-      <p className="playingAs">Just find a move for {playerToMove}</p>
-      { evaluationMessage ? <p className="eval">{evaluationMessage}</p> : null }
-      { bestMoveNumber ? <p className="bestMoveNumber">Your move ranked: {bestMoveNumber}</p> : null }
-      { lastGameAnalysisLink ? <p className="lastGameAnalysisLink"><a href={lastGameAnalysisLink} target="_blank">Analysis link</a> | <a href={lastGameLink} target="_blank">Game link</a></p> : null }
+    (<div className='App'>
+      <div className='information'>
+      <p className='playingAs'>Just find a move for {playerToMove}</p>
+      { evaluationMessage ? <p className='eval'>{evaluationMessage}</p> : null }
+      { bestMoveNumber ? <p className='bestMoveNumber'>Your move ranked: {bestMoveNumber}</p> : null }
+      { lastGameAnalysisLink ? (
+        <p className='lastGameAnalysisLink'>
+          <a href={lastGameAnalysisLink} target='_blank' rel='noreferrer'>Analysis link</a>
+          <span> | </span>
+          <a href={lastGameLink} target='_blank' rel='noreferrer'>Game link</a>
+        </p>
+        ) : null }
       </div>
       <Chessboard
         position={currentPosition.fen}
@@ -147,9 +169,9 @@ function App() {
       />
       <div>
       <br />
-      <button onClick={retryPosition}>Retry position</button> <button onClick={newPosition}>New position</button>
+      <button onClick={resetPosition}>Retry position</button> <button onClick={newPosition}>New position</button>
       <br />
-      <p className="opensource">This project is open-source: <a href="https://github.com/daanheskes/JustAChessMove">Github</a></p>
+      <p className='opensource'>This project is open-source: <a href='https://github.com/daanheskes/JustAChessMove'>Github</a></p>
       </div>
     </div>
     )
