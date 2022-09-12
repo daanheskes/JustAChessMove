@@ -1,6 +1,6 @@
 ![Netlify](https://img.shields.io/netlify/80e6895b-32e1-4a07-8c8b-c09359b5902d)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg)(https://github.com/daanheskes/JustAChessMove/pulls)
-![GitHub](https://img.shields.io/github/license/daanheskes/JustAChessMove)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-green.svg)](https://github.com/daanheskes/JustAChessMove/pulls)
+[![GitHub](https://img.shields.io/github/license/daanheskes/JustAChessMove)](https://github.com/daanheskes/JustAChessMove/blob/main/LICENSE)
 
 # Just A Chess Move
 
