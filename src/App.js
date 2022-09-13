@@ -13,6 +13,13 @@ import TopUi from './components/TopUi';
 import { getResizedBoardSize } from './functions/getResizedBoardSize';
 
 function App() {
+
+  const engine = new Worker('/stockfish.js');
+
+  engine.onmessage = (e) => {
+    console.log(e);
+  }
+
   let game = useRef(null);
   let movesMadeCount = useRef(0);
   const [boardSize, setBoardSize] = useState(600);
@@ -57,7 +64,11 @@ function App() {
     setLoadedPosition(randomPosition);
     setCurrentPosition(randomPosition);
     game.current = chess;
-    setBoardSize(getResizedBoardSize);
+    resizeBoard();
+    engine.postMessage('uci');
+    engine.postMessage('position fen ' + randomPosition.fen);
+    engine.postMessage('go depth 15');
+    console.log(randomPosition.fen);
   }, []);
 
   useEffect(() => {
@@ -157,7 +168,6 @@ function App() {
 
   return (
     <div className='App'>
-      { console.log("hi") }
       <TopUi
         showUi={showUi} 
         playerToMove={playerToMove} 
