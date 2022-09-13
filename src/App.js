@@ -1,8 +1,16 @@
 import './App.scss';
-import React, { useState, useEffect, useRef } from 'react';
+
+// Dependencies
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
+
+// Components
 import ChessPositions from './positions/chessPositions';
+import TopUi from './components/TopUi';
+
+// Functions
+import { getResizedBoardSize } from './functions/getResizedBoardSize';
 
 function App() {
   let game = useRef(null);
@@ -18,7 +26,29 @@ function App() {
   const [lastGameLink, setLastGameLink] = useState(null);
   const [showUi, setShowUi] = useState(false);
 
+  const resizeBoard = useCallback(() => {
+    setBoardSize(getResizedBoardSize);
+  }, []);
+
+  const getRandomPosition = () => {
+    const positions = ChessPositions;
+    const chosenIndex = Math.floor(Math.random() * positions.length);
+
+    return positions[chosenIndex];
+  }
+
+  const checkUndoMove = useCallback(() => {
+    if (movesMadeCount.current <= 0) return;
+    
+    game.current.undo();
+    let currentPositionClone = structuredClone(currentPosition);
+    currentPositionClone.fen = game.current.fen();
+    setCurrentPosition(currentPositionClone);
+    movesMadeCount.current--;
+  }, [currentPosition]);
+
   useEffect(() => {
+    // Initialise chess
     const randomPosition = getRandomPosition();
     const chess = new Chess(randomPosition.fen);
     const playerToMove = chess._turn === 'w' ? 'White' : 'Black';
@@ -27,77 +57,45 @@ function App() {
     setLoadedPosition(randomPosition);
     setCurrentPosition(randomPosition);
     game.current = chess;
+    setBoardSize(getResizedBoardSize);
+  }, []);
 
-    resizeBoard(); 
+  useEffect(() => {
     window.addEventListener('resize', resizeBoard);
 
     return () => {
       window.removeEventListener('resize', resizeBoard);
     }
-  }, []);
+  }, [resizeBoard]);
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentPosition])
+  // const setNewPosition = (newPosition, clearUi = false) => {
+  //   game.current = newPosition.fen;
+  //   setLoadedPosition(newPosition);
+  //   setCurrentPosition(newPosition);
 
-  const handleKeyDown = (e) => {
+  //   if (clearUi) showUi(false);
+  // }
+
+  const handleKeyDown = useCallback((e) => {
     if (e.repeat) return;
 
     if (e.key === 'ArrowLeft') {
       checkUndoMove();
     }
-  }
+  }, [checkUndoMove]);
+  
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown])
 
-  const resizeBoard = () => {
-    const [vw, vh] = getViewportSizes();
-    const UiHeight = 279;
-    let newBoardSize;
-
-    if (vw > vh) {
-      newBoardSize = vh - UiHeight;
-    } else {
-      if (vh - vw <= UiHeight) {
-        newBoardSize = vh - UiHeight;
-      } else {
-        newBoardSize = vw - 52;
-      }
-    }
-
-    setBoardSize(newBoardSize);
-  }
-
-  const getViewportSizes = () => {
-    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-    const vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
-
-    return [vw, vh];
-  }
-
-  const clearUi = () => {
+  function clearPosition() {
     setShowUi(false);
     movesMadeCount.current = 0;
   }
 
-  const getRandomPosition = () => {
-    const positions = ChessPositions;
-    const chosenIndex = Math.floor(Math.random() * positions.length);
-
-    ChessPositions.splice(chosenIndex, 1);
-    return positions[chosenIndex];
-  }
-
-  const checkUndoMove = () => {
-    if (movesMadeCount.current === 0) return;
-    game.current.undo();
-    const currentPositionClone = structuredClone(currentPosition);
-    currentPositionClone.fen = game.current.fen();
-    console.log("triggered");
-    setCurrentPosition(currentPositionClone);
-  }
-
   const resetPosition = () => {
-    clearUi();
+    clearPosition();
     setCurrentPosition(loadedPosition);
     game.current.load(loadedPosition.fen);
   }
@@ -105,7 +103,7 @@ function App() {
   const newPosition = () => {
     const chosenPosition = getRandomPosition();
 
-    clearUi();
+    clearPosition();
     
     setLoadedPosition(chosenPosition);
     setCurrentPosition(chosenPosition);
@@ -126,10 +124,12 @@ function App() {
 
     // Don't allow illegal moves
     if (move === null) return;
+    setShowUi(true);
     movesMadeCount.current++;
     let moveNotation = sourceSquare + targetSquare;
 
     if (movesMadeCount.current === 1) {
+      
       const foundMove = currentPosition.moves.find(x => x.move === moveNotation);
       let evaluationText;
 
@@ -144,51 +144,44 @@ function App() {
       } else {
         evaluationText = 'Not a good move.';
       }
-      console.log(evaluationText);
       setEvaluationMessage(evaluationText);
-      setShowUi(true);
+    } else {
+      setEvaluationMessage('Game continues...');
     }
 
     const currentPositionClone = structuredClone(currentPosition);
     currentPositionClone.fen = game.current.fen();
     setCurrentPosition(currentPositionClone);
-    setShowUi(false);
+    
   }
 
   return (
-    currentPosition !== null ? 
-    (<div className='App'>
-      <div className='information'>
-      <p className='playingAs'>Just find a move for {playerToMove}</p>
-      { showUi && evaluationMessage ? <p className='eval'>{evaluationMessage}</p> : null }
-      { showUi && bestMoveNumber ? <p className='bestMoveNumber'>Your move ranked: {bestMoveNumber}</p> : null }
-      { showUi && lastGameAnalysisLink ? (
-        <p className='lastGameAnalysisLink'>
-          <a href={lastGameAnalysisLink} target='_blank' rel='noreferrer'>Analysis link</a>
-          <span> | </span>
-          <a href={lastGameLink} target='_blank' rel='noreferrer'>Game link</a>
-        </p>
-        ) : null
-      }
-      </div>
-      <Chessboard
-        position={currentPosition.fen}
-        onPieceDrop={onDrop}
-        customLightSquareStyle={{backgroundColor: '#95a5a6'}}
-        customDarkSquareStyle={{backgroundColor: '#34495e'}}
-        boardWidth={boardSize}
-        areArrowsAllowed={true}
-        boardOrientation={boardOrientation}
+    <div className='App'>
+      { console.log("hi") }
+      <TopUi
+        showUi={showUi} 
+        playerToMove={playerToMove} 
+        evaluationMessage={evaluationMessage}
+        bestMoveNumber={bestMoveNumber}
+        lastGameAnalysisLink={lastGameAnalysisLink}
+        lastGameLink={lastGameLink}
       />
+      {
+        <Chessboard
+          position={currentPosition ? currentPosition.fen : 'start'}
+          onPieceDrop={onDrop}
+          customLightSquareStyle={{backgroundColor: '#95a5a6'}}
+          customDarkSquareStyle={{backgroundColor: '#34495e'}}
+          boardWidth={boardSize}
+          areArrowsAllowed={true}
+          boardOrientation={boardOrientation}
+        />
+      }
       <div>
-      <br />
-      <button onClick={resetPosition}>Reset position</button> <button onClick={newPosition}>New position</button>
-      <br />
-      <p className='opensource'>This project is open-source: <a href='https://github.com/daanheskes/JustAChessMove'>Github</a></p>
+        <button onClick={resetPosition}>Reset position</button> <button onClick={newPosition}>New position</button>
+        <p className='opensource'>This project is open-source: <a href='https://github.com/daanheskes/JustAChessMove'>Github</a></p>
       </div>
     </div>
-    )
-    : null
   );
 }
 
